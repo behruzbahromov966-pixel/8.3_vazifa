@@ -3,106 +3,52 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.forms import model_to_dict
 from rest_framework.request import Request
-from rest_framework.generics import get_object_or_404
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 from .models import Building, ConstructionCompany, Comment
 from .serializers import ConstructionCompanySerializer, BuildingSerializer, CommentSerializer
 
-class ConstructionCompanyApiView(APIView):
-    def get(self, request, pk: int=None):
-        if not pk:
-            companies = ConstructionCompany.objects.all()
-            serializer = ConstructionCompanySerializer(companies, many=True)
+class ConstructionCompanyApiView(ListCreateAPIView):
+    queryset = ConstructionCompany.objects.all()
+    serializer_class = ConstructionCompanySerializer
+
+class ConstructionCompanyDetailApiView(RetrieveUpdateDestroyAPIView):
+    queryset = ConstructionCompany.objects.all()
+    serializer_class = ConstructionCompanySerializer
+
+class BuildingApiView(ListCreateAPIView):
+    queryset = Building.objects.all()
+    serializer_class = BuildingSerializer
+    lookup_field = 'company_id'
+
+    def get_queryset(self):
+        company_id = self.kwargs.get("company_id")
+
+        price = self.request.query_params.get('price')
+        price_response =True if price == "high" else False if price == "low" else None
+
+        if company_id:
+            queryset = self.queryset.filter(company_id=company_id)
         else:
-            company = get_object_or_404(ConstructionCompany, pk=pk)
-            serializer = ConstructionCompanySerializer(company)
-        return Response(serializer.data)
+            queryset = self.queryset.all()
 
-    def post(self, request, pk: int=None):
-        if not pk:
-            serializer = ConstructionCompanySerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=201)
-            return Response(serializer.errors, status=400)
+        if price_response == False:
+            queryset = queryset.order_by('price')
+        elif price_response == True:
+            queryset = queryset.order_by('-price')
         else:
-            return Response({"message": "Method POST not allowed "})
+            pass
+        return queryset
 
-    def put(self, request, pk: int=None):
-        company = get_object_or_404(ConstructionCompany, pk=pk)
-        serializer = ConstructionCompanySerializer(instance=company, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
 
-    def delete(self, request, pk: int=None):
-        company = get_object_or_404(ConstructionCompany, pk=pk)
-        company.delete()
-        return Response({"message": "Successfully deleted"}, status=204)
+class BuildingDetailApiView(RetrieveUpdateDestroyAPIView):
+    queryset = Building.objects.all()
+    serializer_class = BuildingSerializer
 
-class BuildingApiView(APIView):
-    def get(self, request, pk: int=None):
-        if not pk:
-            buildings = Building.objects.all()
-            serializer = BuildingSerializer(buildings, many=True)
-        else:
-            building = get_object_or_404(Building, pk=pk)
-            serializer = BuildingSerializer(building)
-        return Response(serializer.data)
+class CommentApiView(ListCreateAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
 
-    def post(self, request, pk: int=None):
-        if not pk:
-            serializer = BuildingSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=201)
-            return Response(serializer.errors, status=400)
-        else:
-            return Response({"message": "Method POST not allowed "})
-
-    def put(self, request, pk: int=None):
-        building = get_object_or_404(Building, pk=pk)
-        serializer = BuildingSerializer(instance=building, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
-
-    def delete(self, request, pk: int=None):
-        building = get_object_or_404(Building, pk=pk)
-        building.delete()
-        return Response({"message": "Successfully deleted"}, status=204)
-
-class CommentApiView(APIView):
-    def get(self, request, pk: int=None):
-        if not pk:
-            comments = Comment.objects.all()
-            serializer = CommentSerializer(comments, many=True)
-        else:
-            comment = get_object_or_404(Comment, pk=pk)
-            serializer = CommentSerializer(comment)
-        return Response(serializer.data)
-
-    def post(self, request, pk: int=None):
-        if not pk:
-            serializer = CommentSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=201)
-            return Response(serializer.errors, status=400)
-        else:
-            return Response({"message": "Method POST not allowed "})
-
-    def put(self, request, pk: int=None):
-        comment = get_object_or_404(Comment, pk=pk)
-        serializer = CommentSerializer(instance=comment, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
-
-    def delete(self, request, pk: int=None):
-        comment = get_object_or_404(Comment, pk=pk)
-        comment.delete()
-        return Response({"message": "Successfully deleted"}, status=204)
+class CommentDetailApiView(RetrieveUpdateDestroyAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
